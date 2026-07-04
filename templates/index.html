@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Attendance Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:      #0C1A2E;
+    --navy-mid:  #162540;
+    --navy-soft: #1E3352;
+    --gold:      #C9943A;
+    --gold-lt:   #E8B85A;
+    --gold-pale: #F5E6C8;
+    --cream:     #F8F5F0;
+    --white:     #FFFFFF;
+    --text:      #1A2840;
+    --text-mid:  #4A5568;
+    --text-soft: #718096;
+    --green:     #276749;
+    --green-lt:  #E6F4EE;
+    --red:       #9B2335;
+    --red-lt:    #FDECEA;
+    --border:    #DDE3ED;
+    --shadow:    0 4px 24px rgba(12,26,46,0.10);
+    --shadow-sm: 0 2px 8px rgba(12,26,46,0.07);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: var(--navy);
+    padding: 0 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-icon {
+    width: 40px; height: 40px;
+    background: var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem; font-weight: 700;
+    color: var(--navy);
+    flex-shrink: 0;
+  }
+  .brand-text h1 {
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--white);
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    line-height: 1.2;
+  }
+  .brand-text p {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.6);
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #4A5568;
+    transition: background 0.3s;
+  }
+  .status-dot.active { background: #48BB78; box-shadow: 0 0 6px #48BB78; }
+
+  /* ── Step nav ── */
+  .step-nav {
+    background: var(--navy-mid);
+    padding: 0 2.5rem;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .step-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 1rem 1.5rem 1rem 1rem;
+    cursor: pointer;
+    position: relative;
+    opacity: 0.45;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .step-item.active { opacity: 1; }
+  .step-item.done { opacity: 0.7; cursor: default; }
+  .step-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 600;
+    color: rgba(255,255,255,0.6);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .step-item.active .step-num {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--navy);
+  }
+  .step-item.done .step-num {
+    background: var(--green);
+    border-color: var(--green);
+    color: white;
+  }
+  .step-item.done .step-num::after { content: '✓'; font-size: 0.85rem; }
+  .step-item.done .step-num span { display: none; }
+  .step-label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.85);
+  }
+
+  /* ── Main content ── */
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 4rem;
+  }
+
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  /* ── Section heading ── */
+  .section-head {
+    margin-bottom: 2rem;
+  }
+  .section-head h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.2;
+  }
+  .section-head p {
+    margin-top: 0.5rem;
+    color: var(--text-soft);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    padding: 1.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 1rem;
+  }
+  .card-accent {
+    border-left: 3px solid var(--gold);
+    padding-left: 1.25rem;
+  }
+
+  /* ── Form elements ── */
+  label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 0.45rem;
+  }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--white);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,148,58,0.12);
+  }
+  .input-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
+  .input-row input { flex: 1; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0.65rem 1.4rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: all 0.18s;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-primary {
+    background: var(--gold);
+    color: var(--navy);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--gold-lt);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(201,148,58,0.35);
+  }
+  .btn-navy {
+    background: var(--navy);
+    color: var(--white);
+  }
+  .btn-navy:hover:not(:disabled) {
+    background: var(--navy-soft);
+    transform: translateY(-1px);
+  }
+  .btn-outline {
+    background: transparent;
+    color: var(--navy);
+    border: 1.5px solid var(--border);
+  }
+  .btn-outline:hover:not(:disabled) {
+    border-color: var(--navy);
+    background: rgba(12,26,46,0.04);
+  }
+  .btn-green {
+    background: var(--green);
+    color: white;
+  }
+  .btn-green:hover:not(:disabled) {
+    background: #1e5236;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(39,103,73,0.3);
+  }
+  .btn-lg {
+    padding: 0.85rem 2rem;
+    font-size: 0.95rem;
+  }
+
+  /* ── Upload zone ── */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--cream);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--gold);
+    background: var(--gold-pale);
+  }
+  .upload-zone input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+  }
+  .upload-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    display: block;
+  }
+  .upload-zone p {
+    color: var(--text-mid);
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+  }
+  .upload-zone small {
+    color: var(--text-soft);
+    font-size: 0.78rem;
+  }
+
+  /* ── Alerts / banners ── */
+  .alert {
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    font-size: 0.88rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+  .alert-success { background: var(--green-lt); color: #1a5436; border: 1px solid #b2dac8; }
+  .alert-error   { background: var(--red-lt);   color: var(--red); border: 1px solid #f5c6c6; }
+  .alert-info    { background: #EBF4FF; color: #1a4480; border: 1px solid #bee3f8; }
+  .alert-warn    { background: #FFFBEB; color: #744210; border: 1px solid #fcd34d; }
+  .alert-icon    { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── District pills ── */
+  .district-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .pill {
+    padding: 0.3rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1.5px solid;
+  }
+  .pill-pending  { background: #F7FAFC; border-color: var(--border); color: var(--text-mid); }
+  .pill-done     { background: var(--green-lt); border-color: #b2dac8; color: var(--green); }
+  .pill-warning  { background: var(--gold-pale); border-color: var(--gold); color: #7a5a1a; }
+
+  /* ── Document queue ── */
+  .doc-list { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; }
+  .doc-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.75rem 1rem;
+    background: var(--cream);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .doc-item .doc-icon { font-size: 1.2rem; flex-shrink: 0; }
+  .doc-item .doc-name { flex: 1; color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .doc-item .doc-status { font-size: 0.78rem; font-weight: 600; }
+  .doc-status.processing { color: var(--gold); }
+  .doc-status.done       { color: var(--green); }
+  .doc-status.error      { color: var(--red); }
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(201,148,58,0.3);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Confirmation table ── */
+  .confirm-district {
+    background: var(--white);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .confirm-district-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: var(--navy);
+    cursor: pointer;
+    user-select: none;
+  }
+  .confirm-district-header h3 {
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--white);
+    font-size: 1.15rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .confirm-district-header h3 span {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .collapse-icon {
+    color: rgba(255,255,255,0.6);
+    transition: transform 0.2s;
+    font-size: 0.9rem;
+  }
+  .confirm-district-body { padding: 1.25rem 1.5rem; }
+  .confirm-district.collapsed .confirm-district-body { display: none; }
+  .confirm-district.collapsed .collapse-icon { transform: rotate(-90deg); }
+
+  /* Service tabs */
+  .svc-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--border);
+    margin-bottom: 1.25rem;
+    overflow-x: auto;
+  }
+  .svc-tab {
+    padding: 0.6rem 1.1rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    transition: color 0.15s;
+  }
+  .svc-tab:hover { color: var(--navy); }
+  .svc-tab.active {
+    color: var(--navy);
+    border-bottom-color: var(--gold);
+  }
+  .svc-panel { display: none; }
+  .svc-panel.active { display: block; }
+
+  /* Attendance table */
+  .att-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+  }
+  .att-table thead tr {
+    background: var(--navy);
+  }
+  .att-table thead th {
+    padding: 0.55rem 0.6rem;
+    text-align: center;
+    color: rgba(255,255,255,0.8);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .att-table thead th:first-child { text-align: left; padding-left: 0.9rem; min-width: 120px; }
+  .att-table tbody tr:nth-child(even) { background: var(--cream); }
+  .att-table tbody tr:hover { background: var(--gold-pale); }
+  .att-table td {
+    padding: 0.45rem 0.5rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .att-table td:first-child {
+    text-align: left;
+    padding-left: 0.9rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    white-space: nowrap;
+  }
+  .att-table td input {
+    width: 52px;
+    padding: 0.3rem 0.35rem;
+    text-align: center;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem;
+    color: var(--text);
+    background: var(--white);
+    transition: border-color 0.15s;
+  }
+  .att-table td input:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(201,148,58,0.15);
+  }
+  .att-table td input.null-cell { background: var(--cream); color: var(--text-soft); }
+  .week-header { min-width: 60px; }
+
+  /* ── Summary ── */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .summary-stat {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+  }
+  .summary-stat .stat-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+  }
+  .summary-stat .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+  }
+  .summary-stat.stat-green .stat-num { color: var(--green); }
+  .summary-stat.stat-warn  .stat-num { color: #B7791F; }
+
+  .summary-district {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .summary-district-header {
+    padding: 0.85rem 1.25rem;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .summary-district-header h4 {
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--white);
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+  .summary-district-header .written-badge {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--gold-lt);
+  }
+  .summary-district-body { padding: 1rem 1.25rem; }
+  .svc-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .svc-summary-row:last-child { border-bottom: none; }
+  .svc-summary-row .svc-name { color: var(--text-mid); font-weight: 500; }
+  .svc-summary-row .svc-count { color: var(--green); font-weight: 600; font-size: 0.8rem; }
+  .blank-list {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--red-lt);
+    border: 1px solid #f5c6c6;
+    border-radius: 6px;
+  }
+  .blank-list h5 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--red);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .blank-item {
+    font-size: 0.78rem;
+    color: #7B2335;
+    padding: 0.15rem 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .blank-item::before { content: '—'; opacity: 0.5; }
+
+  /* ── Download section ── */
+  .download-box {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-soft) 100%);
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  .download-box h3 {
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--white);
+    font-size: 1.6rem;
+    margin-bottom: 0.5rem;
+  }
+  .download-box p {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.88rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Utilities ── */
+  .row { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+  .col { flex: 1; min-width: 200px; }
+  .mt-1 { margin-top: 0.75rem; }
+  .mt-2 { margin-top: 1.25rem; }
+  .mt-3 { margin-top: 2rem; }
+  .text-center { text-align: center; }
+  .hidden { display: none !important; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+  .flex-end { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; }
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .tag-gold { background: var(--gold-pale); color: #7a5a1a; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    header { padding: 0 1rem; }
+    .step-nav { padding: 0 1rem; }
+    main { padding: 1.5rem 1rem 3rem; }
+    .card { padding: 1.25rem; }
+    .section-head h2 { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="brand">
+    <div class="brand-icon">✦</div>
+    <div class="brand-text">
+      <h1>AI Attendance Manager</h1>
+      <p>Automated Data Entry Dashboard</p>
+    </div>
+  </div>
+  <div class="header-status">
+    <div class="status-dot" id="apiDot"></div>
+    <span id="apiStatusLabel">No API Key</span>
+  </div>
+</header>
+
+<!-- Step navigation -->
+<nav class="step-nav">
+  <div class="step-item active" id="nav1" onclick="jumpStep(1)">
+    <div class="step-num"><span>1</span></div>
+    <span class="step-label">Setup</span>
+  </div>
+  <div class="step-item" id="nav2" onclick="jumpStep(2)">
+    <div class="step-num"><span>2</span></div>
+    <span class="step-label">Upload Documents</span>
+  </div>
+  <div class="step-item" id="nav3" onclick="jumpStep(3)">
+    <div class="step-num"><span>3</span></div>
+    <span class="step-label">Review & Confirm</span>
+  </div>
+  <div class="step-item" id="nav4" onclick="jumpStep(4)">
+    <div class="step-num"><span>4</span></div>
+    <span class="step-label">Results</span>
+  </div>
+</nav>
+
+<main>
+
+<!-- ══ STEP 1: Setup ══════════════════════════════════════════════════════ -->
+<div class="step-panel active" id="step1">
+  <div class="section-head">
+    <h2>Welcome. Let's get started.</h2>
+    <p>Enter your Gemini API key and upload the attendance Excel template to begin.</p>
+  </div>
+
+  <!-- API Key -->
+  <div class="card card-accent">
+    <h3>🔑 Gemini API Key</h3>
+    <p style="font-size:0.88rem;color:var(--text-soft);margin-bottom:1rem;">
+      Your key is used to power the AI document reading. It stays in your browser session only.
+      Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--gold)">aistudio.google.com</a>.
+    </p>
+    <div class="input-row">
+      <input type="password" id="apiKeyInput" placeholder="AIzaSy..." autocomplete="off">
+      <button class="btn btn-primary" onclick="setApiKey()">Save Key</button>
+    </div>
+    <div id="apiKeyMsg" class="mt-1"></div>
+  </div>
+
+  <!-- Template upload -->
+  <div class="card">
+    <h3>📋 Excel Template</h3>
+    <p style="font-size:0.88rem;color:var(--text-soft);margin-bottom:1.25rem;">
+      Upload the attendance .xlsx template. The "DATA INPUT" sheet will be filled.
+    </p>
+    <div class="upload-zone" id="templateZone">
+      <input type="file" id="templateFile" accept=".xlsx" onchange="uploadTemplate(this.files[0])">
+      <span class="upload-icon">📊</span>
+      <p><strong>Drag & drop your .xlsx template here</strong></p>
+      <p>or click to browse</p>
+      <small>Only .xlsx files accepted</small>
+    </div>
+    <div id="templateMsg" class="mt-1"></div>
+    <div id="templateDistrictPills" class="district-pills"></div>
+  </div>
+
+  <div class="flex-end">
+    <button class="btn btn-navy btn-lg" id="toStep2Btn" disabled onclick="goToStep(2)">
+      Continue to Upload Documents →
+    </button>
+  </div>
+</div>
+
+
+<!-- ══ STEP 2: Upload Documents ═══════════════════════════════════════════ -->
+<div class="step-panel" id="step2">
+  <div class="section-head">
+    <h2>Upload District Documents</h2>
+    <p>Upload PDFs, Images (JPG/PNG), or Word documents. <strong>You can drag and drop, or simply paste (Ctrl+V) copied images directly onto this page.</strong></p>
+  </div>
+
+  <div class="card">
+    <h3>📎 Add Documents</h3>
+    <div class="upload-zone" id="docZone">
+      <input type="file" id="docFiles" accept=".pdf,.jpg,.jpeg,.png,.webp,.docx" multiple onchange="queueDocuments(this.files)">
+      <span class="upload-icon">📄</span>
+      <p><strong>Drop or Paste (Ctrl+V) documents here</strong></p>
+      <p>PDF, JPG, PNG, DOCX — one or multiple at once</p>
+      <small>Each document is processed individually</small>
+    </div>
+  </div>
+
+  <div class="card" id="docQueueCard" style="display:none">
+    <h3>Processing Queue</h3>
+    <div id="docList" class="doc-list"></div>
+  </div>
+
+  <div class="card" id="extractedPreviewCard" style="display:none">
+    <h3>✅ Documents Extracted</h3>
+    <p style="font-size:0.88rem;color:var(--text-soft);margin-bottom:1rem;">
+      Review extracted districts below. Proceed to the next step to edit individual values.
+    </p>
+    <div id="extractedPillList" class="district-pills"></div>
+  </div>
+
+  <div id="step2Alert"></div>
+
+  <div class="flex-end">
+    <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+    <button class="btn btn-navy btn-lg" id="toStep3Btn" disabled onclick="goToStep(3)">
+      Review Data →
+    </button>
+  </div>
+</div>
+
+
+<!-- ══ STEP 3: Review & Confirm ═══════════════════════════════════════════ -->
+<div class="step-panel" id="step3">
+  <div class="section-head">
+    <h2>Review & Confirm Data</h2>
+    <p>Check all extracted values. Click any cell to edit. Blank cells (shown as empty) will remain unfilled in the template.</p>
+  </div>
+
+  <div id="confirmTablesContainer"></div>
+
+  <div id="step3Alert"></div>
+
+  <div class="flex-end">
+    <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+    <button class="btn btn-green btn-lg" onclick="writeToExcel()">
+      ✓ Confirm & Write to Excel
+    </button>
+  </div>
+</div>
+
+
+<!-- ══ STEP 4: Results ════════════════════════════════════════════════════ -->
+<div class="step-panel" id="step4">
+  <div class="section-head">
+    <h2>Done! Here's your summary.</h2>
+    <p>The Excel file has been filled. Review what was written and any flagged blank cells below.</p>
+  </div>
+
+  <div id="summaryStatsGrid" class="summary-grid"></div>
+
+  <div class="download-box">
+    <h3>Your Filled Excel is Ready</h3>
+    <p>Download the completed attendance sheet below.</p>
+    <a class="btn btn-primary btn-lg" id="downloadBtn" href="/api/download">
+      ⬇ Download Excel File
+    </a>
+  </div>
+
+  <div id="summaryDistrictsContainer"></div>
+
+  <div class="flex-end">
+    <button class="btn btn-outline" onclick="startFresh()">↩ Start New Session</button>
+    <button class="btn btn-outline" onclick="goToStep(2)">Add More Documents</button>
+  </div>
+</div>
+
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+const state = {
+  step: 1,
+  apiKeySet: false,
+  templateLoaded: false,
+  templateDistricts: [],
+  extracted: {},         // district -> full extracted data
+  processingCount: 0,
+  doneCount: 0,
+};
+
+const SERVICE_KEYS = ['sunday', 'monday', 'thursday', 'home_caring'];
+const CAT_KEYS = [
+  'adult_men', 'adult_women',
+  'campus_male', 'campus_female',
+  'youth_boys', 'youth_girls',
+  'children_boys', 'children_girls',
+  'visitors_male', 'visitors_female',
+];
+const SERVICE_LABELS = {{ service_labels | tojson }};
+const CAT_LABELS     = {{ category_labels | tojson }};
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function showMsg(elId, type, text) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${
+    {success:'✓', error:'✕', info:'ℹ', warn:'⚠'}[type]
+  }</span>${text}</div>`;
+}
+
+function clearMsg(elId) {
+  const el = document.getElementById(elId);
+  if (el) el.innerHTML = '';
+}
+
+function post(url, body) {
+  return fetch(url, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  }).then(r => r.json());
+}
+
+function postForm(url, formData) {
+  return fetch(url, { method: 'POST', body: formData }).then(r => r.json());
+}
+
+// ── Step navigation ───────────────────────────────────────────────────────
+function goToStep(n) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`step${n}`).classList.add('active');
+  document.querySelectorAll('.step-item').forEach((item, i) => {
+    item.classList.remove('active', 'done');
+    if (i + 1 < n) item.classList.add('done');
+    if (i + 1 === n) item.classList.add('active');
+  });
+  state.step = n;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+
+  if (n === 3) buildConfirmTables();
+}
+
+function jumpStep(n) {
+  if (n < state.step) goToStep(n);
+}
+
+// ── Step 1: API Key ───────────────────────────────────────────────────────
+async function setApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { showMsg('apiKeyMsg', 'error', 'Please enter your API key.'); return; }
+  const res = await post('/api/set-key', { api_key: key });
+  if (res.success) {
+    state.apiKeySet = true;
+    showMsg('apiKeyMsg', 'success', 'API key saved for this session.');
+    document.getElementById('apiDot').classList.add('active');
+    document.getElementById('apiStatusLabel').textContent = 'API Key Active';
+    document.getElementById('apiKeyInput').value = '••••••••••••••••••••';
+    checkStep1Ready();
+  } else {
+    showMsg('apiKeyMsg', 'error', res.error);
+  }
+}
+
+async function uploadTemplate(file) {
+  if (!file) return;
+  clearMsg('templateMsg');
+  showMsg('templateMsg', 'info', 'Uploading template...');
+
+  const fd = new FormData();
+  fd.append('template', file);
+  const res = await postForm('/api/upload-template', fd);
+
+  if (res.success) {
+    state.templateLoaded = true;
+    state.templateDistricts = res.districts;
+    showMsg('templateMsg', 'success', `Template loaded: <strong>${res.filename}</strong>`);
+
+    const pills = document.getElementById('templateDistrictPills');
+    pills.innerHTML = '<strong style="font-size:0.8rem;color:var(--text-soft);margin-right:8px;">Districts found:</strong>' +
+      res.districts.map(d => `<span class="pill pill-pending">${d}</span>`).join('');
+
+    checkStep1Ready();
+  } else {
+    showMsg('templateMsg', 'error', res.error);
+  }
+}
+
+function checkStep1Ready() {
+  document.getElementById('toStep2Btn').disabled = !(state.apiKeySet && state.templateLoaded);
+}
+
+// ── Step 2: Process Documents ─────────────────────────────────────────────
+function queueDocuments(files) {
+  if (!files || files.length === 0) return;
+  document.getElementById('docQueueCard').style.display = '';
+  Array.from(files).forEach(f => processOneDocument(f));
+  document.getElementById('docFiles').value = '';
+}
+
+async function processOneDocument(file) {
+  state.processingCount++;
+  const id = `doc-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+  const ext = file.name ? file.name.split('.').pop().toUpperCase() : 'CLIPBOARD';
+  const icons = { PDF:'📄', JPG:'🖼', JPEG:'🖼', PNG:'🖼', WEBP:'🖼', DOCX:'📝', CLIPBOARD:'📋' };
+  const icon = icons[ext] || '📎';
+
+  const list = document.getElementById('docList');
+  const item = document.createElement('div');
+  item.className = 'doc-item';
+  item.id = id;
+  item.innerHTML = `
+    <span class="doc-icon">${icon}</span>
+    <span class="doc-name">${file.name || 'Pasted Clipboard Document'}</span>
+    <span class="doc-status processing"><span class="spinner"></span> Processing…</span>`;
+  list.appendChild(item);
+
+  const fd = new FormData();
+  fd.append('document', file);
+  const res = await postForm('/api/process-document', fd);
+
+  const statusEl = item.querySelector('.doc-status');
+  if (res.success) {
+    const d = res.data.district;
+    state.extracted[d] = res.data;
+    statusEl.className = 'doc-status done';
+    statusEl.textContent = `✓ ${d}`;
+    updateExtractedPills();
+  } else {
+    statusEl.className = 'doc-status error';
+    statusEl.textContent = `✕ ${res.error}`;
+  }
+
+  state.doneCount++;
+  if (state.doneCount >= state.processingCount && Object.keys(state.extracted).length > 0) {
+    document.getElementById('toStep3Btn').disabled = false;
+    showMsg('step2Alert', 'success',
+      `${Object.keys(state.extracted).length} district(s) extracted. Proceed to review the data.`);
+  }
+}
+
+function updateExtractedPills() {
+  const card = document.getElementById('extractedPreviewCard');
+  card.style.display = '';
+  const container = document.getElementById('extractedPillList');
+  container.innerHTML = Object.keys(state.extracted).map(d =>
+    `<span class="pill pill-done">✓ ${d}</span>`
+  ).join('');
+}
+
+// ── Step 3: Confirmation Tables ───────────────────────────────────────────
+function buildConfirmTables() {
+  const container = document.getElementById('confirmTablesContainer');
+  container.innerHTML = '';
+
+  if (Object.keys(state.extracted).length === 0) {
+    container.innerHTML = '<div class="alert alert-warn"><span class="alert-icon">⚠</span>No extracted data found. Go back and upload documents.</div>';
+    return;
+  }
+
+  Object.entries(state.extracted).forEach(([distName, distData]) => {
+    container.appendChild(buildDistrictCard(distName, distData));
+  });
+}
+
+function buildDistrictCard(distName, distData) {
+  const services = distData.services || {};
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'confirm-district';
+  wrapper.id = `confirm-${distName.replace(/\s/g,'-')}`;
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'confirm-district-header';
+  header.innerHTML = `
+    <h3>${distName} <span>${distData.month || ''} ${distData.year || ''}</span></h3>
+    <span class="collapse-icon">▼</span>`;
+  header.onclick = () => wrapper.classList.toggle('collapsed');
+  wrapper.appendChild(header);
+
+  // Body
+  const body = document.createElement('div');
+  body.className = 'confirm-district-body';
+
+  // Tabs
+  const tabs = document.createElement('div');
+  tabs.className = 'svc-tabs';
+  const panels = document.createElement('div');
+
+  SERVICE_KEYS.forEach((svc, si) => {
+    const tab = document.createElement('div');
+    tab.className = `svc-tab${si === 0 ? ' active' : ''}`;
+    tab.textContent = SERVICE_LABELS[svc];
+    tab.onclick = () => {
+      wrapper.querySelectorAll('.svc-tab').forEach(t => t.classList.remove('active'));
+      wrapper.querySelectorAll('.svc-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      wrapper.querySelector(`#panel-${distName.replace(/\s/g,'-')}-${svc}`).classList.add('active');
+    };
+    tabs.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = `svc-panel${si === 0 ? ' active' : ''}`;
+    panel.id = `panel-${distName.replace(/\s/g,'-')}-${svc}`;
+
+    const svcData = services[svc] || {};
+    panel.appendChild(buildAttTable(distName, svc, svcData));
+    panels.appendChild(panel);
+  });
+
+  body.appendChild(tabs);
+  body.appendChild(panels);
+  wrapper.appendChild(body);
+  return wrapper;
+}
+
+function buildAttTable(distName, svc, svcData) {
+  const table = document.createElement('table');
+  table.className = 'att-table';
+
+  // Header
+  table.innerHTML = `<thead><tr>
+    <th>Category</th>
+    <th class="week-header">Week 1</th>
+    <th class="week-header">Week 2</th>
+    <th class="week-header">Week 3</th>
+    <th class="week-header">Week 4</th>
+    <th class="week-header">Week 5</th>
+  </tr></thead>`;
+
+  const tbody = document.createElement('tbody');
+  CAT_KEYS.forEach(cat => {
+    const vals = svcData[cat] || [null, null, null, null, null];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${CAT_LABELS[cat]}</td>` +
+      Array.from({length: 5}, (_, wi) => {
+        const v = vals[wi] !== undefined ? vals[wi] : null;
+        const isNull = v === null;
+        return `<td><input
+          type="number" min="0"
+          class="${isNull ? 'null-cell' : ''}"
+          value="${isNull ? '' : v}"
+          placeholder="—"
+          data-district="${distName}"
+          data-svc="${svc}"
+          data-cat="${cat}"
+          data-week="${wi}"
+          oninput="onCellEdit(this)"
+        ></td>`;
+      }).join('');
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  return table;
+}
+
+function onCellEdit(input) {
+  const { district, svc, cat, week } = input.dataset;
+  const wi = parseInt(week);
+  const val = input.value === '' ? null : parseInt(input.value);
+
+  if (!state.extracted[district]) return;
+  if (!state.extracted[district].services) state.extracted[district].services = {};
+  if (!state.extracted[district].services[svc]) state.extracted[district].services[svc] = {};
+  const arr = state.extracted[district].services[svc][cat] || [null,null,null,null,null];
+  arr[wi] = val;
+  state.extracted[district].services[svc][cat] = arr;
+
+  input.classList.toggle('null-cell', val === null);
+}
+
+// ── Step 4: Write & Summary ───────────────────────────────────────────────
+async function writeToExcel() {
+  clearMsg('step3Alert');
+  showMsg('step3Alert', 'info', 'Writing data to Excel… please wait.');
+
+  const res = await post('/api/write', { data: state.extracted });
+
+  if (!res.success) {
+    showMsg('step3Alert', 'error', res.error);
+    return;
+  }
+
+  buildSummary(res);
+  goToStep(4);
+}
+
+function buildSummary(res) {
+  // Stats
+  const statsGrid = document.getElementById('summaryStatsGrid');
+  const totalBlanks = res.summary.reduce((a, d) => a + d.blanks.length, 0);
+  statsGrid.innerHTML = `
+    <div class="summary-stat stat-green">
+      <div class="stat-num">${res.total_written}</div>
+      <div class="stat-label">Cells Written</div>
+    </div>
+    <div class="summary-stat">
+      <div class="stat-num">${res.summary.length}</div>
+      <div class="stat-label">Districts Filled</div>
+    </div>
+    <div class="summary-stat ${totalBlanks > 0 ? 'stat-warn' : 'stat-green'}">
+      <div class="stat-num">${totalBlanks}</div>
+      <div class="stat-label">Blank Cells Flagged</div>
+    </div>`;
+
+  // Per-district breakdown
+  const container = document.getElementById('summaryDistrictsContainer');
+  container.innerHTML = '';
+
+  res.summary.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'summary-district';
+
+    div.innerHTML = `
+      <div class="summary-district-header">
+        <h4>${d.district}</h4>
+        <span class="written-badge">${d.written} cells written</span>
+      </div>
+      <div class="summary-district-body">
+        ${Object.entries(d.services).map(([svc, info]) => `
+          <div class="svc-summary-row">
+            <span class="svc-name">${info.label}</span>
+            <span class="svc-count">+${info.written} cells</span>
+          </div>
+        `).join('')}
+        ${d.blanks.length > 0 ? `
+          <div class="blank-list mt-1">
+            <h5>⚠ Blank / Missing (W1–W4)</h5>
+            ${d.blanks.slice(0, 20).map(b => `<div class="blank-item">${b}</div>`).join('')}
+            ${d.blanks.length > 20 ? `<div class="blank-item">… and ${d.blanks.length - 20} more</div>` : ''}
+          </div>
+        ` : `<div class="alert alert-success mt-1" style="font-size:0.82rem;padding:0.6rem 0.85rem;">
+          <span class="alert-icon">✓</span> No blank cells flagged for W1–W4.
+        </div>`}
+      </div>`;
+
+    container.appendChild(div);
+  });
+}
+
+function startFresh() {
+  state.extracted = {};
+  state.processingCount = 0;
+  state.doneCount = 0;
+  state.templateLoaded = false;
+  document.getElementById('docList').innerHTML = '';
+  document.getElementById('docQueueCard').style.display = 'none';
+  document.getElementById('extractedPreviewCard').style.display = 'none';
+  document.getElementById('extractedPillList').innerHTML = '';
+  document.getElementById('templateDistrictPills').innerHTML = '';
+  document.getElementById('toStep2Btn').disabled = true;
+  document.getElementById('toStep3Btn').disabled = true;
+  clearMsg('templateMsg');
+  clearMsg('step2Alert');
+  goToStep(1);
+}
+
+// ── Drag & drop and Paste Integration ───────────────────────────────────────
+['templateZone', 'docZone'].forEach(id => {
+  const zone = document.getElementById(id);
+  if (!zone) return;
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    if (id === 'templateZone' && e.dataTransfer.files[0]) uploadTemplate(e.dataTransfer.files[0]);
+    if (id === 'docZone') queueDocuments(e.dataTransfer.files);
+  });
+});
+
+window.addEventListener('paste', (e) => {
+  const files = e.clipboardData.files;
+  if (!files || files.length === 0) return;
+
+  const isStep1Active = document.getElementById('step1').classList.contains('active');
+  const isStep2Active = document.getElementById('step2').classList.contains('active');
+
+  if (isStep1Active) {
+    const file = files[0];
+    if (file.name.endsWith('.xlsx') || file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+      e.preventDefault();
+      uploadTemplate(file);
+    } else {
+      showMsg('templateMsg', 'error', 'Please paste an Excel (.xlsx) file for the template.');
+    }
+  } else if (isStep2Active) {
+    e.preventDefault();
+    document.getElementById('docZone').classList.add('drag-over');
+    setTimeout(() => document.getElementById('docZone').classList.remove('drag-over'), 200);
+    queueDocuments(files);
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+(async () => {
+  const res = await fetch('/api/check-key').then(r => r.json());
+  if (res.has_key) {
+    state.apiKeySet = true;
+    document.getElementById('apiDot').classList.add('active');
+    document.getElementById('apiStatusLabel').textContent = 'API Key Active';
+    showMsg('apiKeyMsg', 'success', 'API key already active this session.');
+    checkStep1Ready();
+  }
+})();
+</script>
+</body>
+</html>
