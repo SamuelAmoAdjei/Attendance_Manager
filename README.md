@@ -26,6 +26,6 @@ If you manage branch-based data reporting, you can easily fork this project and 
 ### 2. Installation
 Clone the repository and install the dependencies:
 ```bash
-git clone [https://github.com/yourusername/ai-attendance-manager.git](https://github.com/yourusername/ai-attendance-manager.git)
-cd ai-attendance-manager
+git clone https://github.com/SamuelAmoAdjei/Attendance_Manager.git
+cd Attendance_Manager
 pip install -r requirements.txt
